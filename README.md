@@ -4,8 +4,6 @@ FreeBSD 13.5 i386 with an i3 graphical desktop, running in the browser via x86 e
 
 ![webBSD Screenshot](screenshot.png)
 
-**[Live Demo](https://webbsd.widgetry.org/)**
-
 ## Overview
 
 webBSD uses [v86](https://github.com/copy/v86) to emulate x86 hardware in WebAssembly. A compressed saved state (~61 MB) restores directly to the desktop without a full boot. Networking is handled by a [WISP](https://github.com/nicvagn/wisp-protocol) proxy — TCP connections from the guest are forwarded through the server to the internet. DHCP, DNS (via DoH), and general TCP all work.
