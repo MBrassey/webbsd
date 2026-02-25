@@ -1,0 +1,9 @@
+node_modules/
+images/
+v86/
+TinyEMU/
+build/
+*.iso
+*.img
+*.bin
+*.wasm

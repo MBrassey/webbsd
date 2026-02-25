@@ -1,0 +1,21 @@
+{
+  "name": "webbsd",
+  "version": "0.2.0",
+  "description": "FreeBSD desktop in the browser — powered by v86",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "bash scripts/build-desktop.sh",
+    "build:image": "python3 scripts/build-image.py",
+    "build:image:skip-download": "python3 scripts/build-image.py --skip-download",
+    "fix-image": "python3 scripts/fix-image.py",
+    "fix-network": "python3 scripts/fix-network.py",
+    "install-x11": "python3 scripts/install-x11.py",
+    "save-state": "node scripts/save-state.mjs",
+    "test": "node test-freebsd.mjs"
+  },
+  "dependencies": {
+    "@mercuryworkshop/wisp-js": "^0.4.1"
+  }
+}

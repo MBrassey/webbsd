@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>webBSD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        #screen_container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        #screen_container > div:first-child {
+            white-space: pre;
+            font: 14px monospace;
+            line-height: 18px;
+            color: #c0c0c0;
+        }
+        #screen_container canvas {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* Loading overlay */
+        #loading {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 50;
+            background: #080808;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            transition: opacity 0.5s;
+        }
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #loading svg {
+            width: 80px;
+            height: 80px;
+            opacity: 0.3;
+            margin-bottom: 20px;
+        }
+        #load-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+        #load-title span { color: #ab1100; }
+        #load-status {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        #progress-wrap {
+            width: 300px;
+            height: 4px;
+            background: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #ab1100;
+            transition: width 0.3s;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="screen_container">
+        <div></div>
+        <canvas></canvas>
+    </div>
+
+    <div id="loading">
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 64 64" fill="#ab1100"><path d="M63.27 1.608c3.4 3.4-6.03 18.295-7.62 19.886s-5.6.126-9-3.266-4.856-7.4-3.266-9c1.6-1.633 16.495-11 19.886-7.62zM15.7 5.2C10.518 2.278 3.15-.987.806 1.357-1.58 3.743 1.8 11.28 4.783 16.47 7.42 11.823 11.188 7.972 15.7 5.2zm42.378 15.122c.46 1.633.377 2.972-.377 3.726-1.8 1.8-6.698-.126-11.094-4.312-.293-.293-.628-.544-.92-.88-1.6-1.6-2.847-3.266-3.6-4.856-1.55-2.763-1.926-5.2-.754-6.364.628-.628 1.633-.795 2.9-.586.795-.502 1.758-1.1 2.805-1.675C42.755 3.157 37.94 1.9 32.833 1.9c-16.997 0-30.77 13.774-30.77 30.77s13.774 30.77 30.77 30.77 30.77-13.774 30.77-30.77c0-5.484-1.423-10.634-3.977-15.113a27.18 27.18 0 0 1-1.549 2.763z"/></svg>
+        <div id="load-title">web<span>BSD</span></div>
+        <div id="load-status">Loading desktop...</div>
+        <div id="progress-wrap"><div id="progress-bar"></div></div>
+    </div>
+
+
+    <script src="v86/build/libv86.js"></script>
+    <script>
+    "use strict";
+
+    var emulator;
+    var loadingEl = document.getElementById("loading");
+    var loadStatus = document.getElementById("load-status");
+    var progressBar = document.getElementById("progress-bar");
+
+    var FREEBSD_IMAGE_SIZE = 10737418240; // 10GB (FreeBSD 13.5 VM image)
+
+    function getRelayUrl() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has("relay")) return params.get("relay");
+        // WISP proxy: TCP through server, DHCP/DNS/ICMP handled locally
+        var proto = window.location.protocol === "https:" ? "wisps:" : "wisp:";
+        return proto + "//" + window.location.host + "/";
+    }
+
+    window.onload = function() {
+        var useState = window.location.search.indexOf("nostate") === -1;
+        var relayUrl = getRelayUrl();
+
+        var config = {
+            wasm_path: "v86/build/v86.wasm",
+            memory_size: 3072 * 1024 * 1024,
+            vga_memory_size: 64 * 1024 * 1024,
+            screen_container: document.getElementById("screen_container"),
+            bios: { url: "v86/bios/seabios.bin" },
+            vga_bios: { url: "v86/bios/vgabios.bin" },
+            hda: {
+                url: "images/freebsd.img",
+                async: true,
+                size: FREEBSD_IMAGE_SIZE,
+            },
+            autostart: true,
+            acpi: true,
+            net_device: {
+                relay_url: relayUrl,
+                type: "virtio",
+            },
+            preserve_mac_from_state_image: true,
+        };
+
+        if (useState) {
+            config.initial_state = { url: "images/freebsd_state.bin.zst?t=" + Date.now() };
+        }
+
+        try {
+            emulator = window.emulator = new V86(config);
+        } catch(e) {
+            loadStatus.textContent = "Error: " + e.message;
+            return;
+        }
+
+        emulator.add_listener("emulator-ready", function() {
+            // Fade out loading screen
+            setTimeout(function() {
+                loadingEl.classList.add("hidden");
+            }, 500);
+        });
+
+        emulator.add_listener("download-progress", function(e) {
+            if (e.loaded && e.total) {
+                var pct = Math.round(e.loaded / e.total * 100);
+                progressBar.style.width = pct + "%";
+                loadStatus.textContent = "Downloading: " + pct + "% (" +
+                    Math.round(e.loaded / 1048576) + " / " +
+                    Math.round(e.total / 1048576) + " MB)";
+            }
+        });
+
+        // Click canvas to capture mouse
+        document.getElementById("screen_container").addEventListener("click", function() {
+            if (!document.pointerLockElement) {
+                emulator.lock_mouse();
+            }
+        });
+    };
+    </script>
+</body>
+</html>
