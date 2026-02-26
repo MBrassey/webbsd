@@ -136,7 +136,9 @@ Host static files on a server with range request support (the 10 GB disk image r
 - [FreeBSD](https://www.freebsd.org/) — The FreeBSD Project
 - [JSLinux](https://bellard.org/jslinux/) — Fabrice Bellard
 - [wisp-js](https://github.com/nicvagn/wisp-js) — Mercury Workshop
+- [FreeBSD Wallpapers](https://github.com/fuzzy/freebsd-wallpapers) — fuzzy
+- [FreeBSD vs Linux](https://markmcb.com/freebsd/vs_linux/) — Mark McBride
 
 ## License
 
-MIT
+CC0-1.0
